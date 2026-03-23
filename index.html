@@ -139,13 +139,18 @@
   <div class="footer">釧路市 市民環境部 環境事業課</div>
 </div>
 <script>
-var GAS_URL  = 'https://script.google.com/macros/s/AKfycbwdSfB2MNQly7joNssHBJQGEnLUovT3W3zI8Fr9YRRPX2xTV524hxHdzlqAjlveIugSxQ/exec';
+// ============================================
+// DBはGitHub上のJSONファイルから取得
+// GASへの依存なし
+// ============================================
+var DB_URL   = 'https://kakankyoukanri-dot.github.io/kushiro-gomi/gomi_db.json';
+var LOG_URL  = 'https://script.google.com/macros/s/AKfycbwdSfB2MNQly7joNssHBJQGEnLUovT3W3zI8Fr9YRRPX2xTV524hxHdzlqAjlveIugSxQ/exec';
 var DB       = [];
 var ICONS    = {};
 var DB_READY = false;
 
-// 起動時にGASからDB取得
-fetch(GAS_URL + '?mode=getdb')
+// 起動時にGitHubからDB取得
+fetch(DB_URL)
   .then(function(r) { return r.json(); })
   .then(function(d) {
     DB       = d.db    || [];
@@ -173,30 +178,15 @@ function norm(str) {
   return [s, toK(s), toH(s)];
 }
 
-// ============================================
 // 検索
-// スコア基準：
-//   110点 完全一致（品目名）
-//   100点 完全一致（キーワード）
-//    85点 前方一致（品目名・3文字以上のみ）
-//    80点 前方一致（キーワード・3文字以上のみ）
-//    65点 部分一致（品目名・3文字以上のみ）
-//    60点 部分一致（キーワード・3文字以上のみ）
-// 1文字：完全一致のみ
-// 2文字：完全一致のみ
-// 3文字以上：完全一致＋前方一致＋部分一致
-// ============================================
 function searchLocal(query) {
   var res = [], qs = norm(query);
   var len = query.length;
-  // 3文字以上のみ前方一致・部分一致を使用
   var useFront   = len >= 3;
   var usePartial = len >= 3;
 
   for (var i = 0; i < DB.length; i++) {
     var r = DB[i], sc = 0;
-
-    // ── 品目名スコアリング（最大110点）──
     var nv = norm(r.name), done = false;
     for (var qi = 0; qi < qs.length && !done; qi++) {
       for (var ni = 0; ni < nv.length && !done; ni++) {
@@ -209,8 +199,6 @@ function searchLocal(query) {
         }
       }
     }
-
-    // ── キーワードスコアリング（最大100点）──
     if (sc < 110) {
       var dk = false;
       for (var ki = 0; ki < r.keywords.length && !dk; ki++) {
@@ -229,12 +217,9 @@ function searchLocal(query) {
         }
       }
     }
-
-    // 2文字以下は完全一致のみ許可
     if (len <= 2 && sc < 100) continue;
     if (sc > 0) res.push({ item: r, score: sc });
   }
-
   res.sort(function(a, b) { return b.score - a.score || a.item.name.localeCompare(b.item.name, 'ja'); });
   return res.map(function(r) { return r.item; });
 }
@@ -270,8 +255,8 @@ function doSearch() {
   bar.style.display  = 'none';
   wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-  // ログ保存（fetch方式）
-  fetch(GAS_URL + '?q=' + encodeURIComponent(q) + '&found=' + (results.length > 0 ? '1' : '0'))
+  // ログ保存（GASに送信・任意）
+  fetch(LOG_URL + '?q=' + encodeURIComponent(q) + '&found=' + (results.length > 0 ? '1' : '0'))
     .catch(function() {});
 }
 
@@ -307,20 +292,17 @@ function buildHtml(item, skipKw) {
   var icon = ICONS[item.category] || '';
   var html = '';
   if (!skipKw) {
-    // 複数件時：タイトルにバッジ表示済みなのでここではバッジ不要
+    // 1件表示時：キーワードとバッジを表示
     var dk = item.keywords.filter(function(k) { return k && k !== item.name; });
     if (dk.length > 0) html += '<div class="item-kw">別名・関連：' + esc(dk.join('、')) + '</div>';
-  } else {
-    // 1件時：品目名ヘッダーにバッジを表示
-  }
-  // 1件時のみバッジを大きく表示（skipKw=falseのとき）
-  if (!skipKw) {
     html += '<span class="lbl-cat">' + icon + ' ' + esc(item.category) + '</span>';
   }
+  // 処分方法
   if (item.method && item.method !== 'nan') {
     html += '<div class="lbl-method">📋 処分方法</div>';
     html += '<div class="val-method">' + esc(item.method).replace(/\n/g, '<br>') + '</div>';
   }
+  // 持込先・連絡先
   if (item.place && item.place !== 'nan' && item.place !== '') {
     html += '<div class="lbl-place">🏪 持込先・連絡先</div>';
     var ph = esc(item.place).replace(/\n/g, '<br>')
@@ -331,6 +313,7 @@ function buildHtml(item, skipKw) {
         });
     html += '<div class="val-place">' + ph + '</div>';
   }
+  // 注意事項
   if (item.note && item.note !== 'nan' && item.note !== '') {
     html += '<div class="lbl-note">⚠️ 注意事項</div>';
     html += '<div class="val-note">' + esc(item.note).replace(/\n/g, '<br>') + '</div>';
