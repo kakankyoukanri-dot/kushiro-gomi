@@ -124,7 +124,7 @@
       onkeydown="if(event.key==='Enter')doSearch()">
     <button id="btn" onclick="doSearch()" disabled>読み込み中…</button>
     <div class="loading-bar" id="bar"><div class="loading-bar-inner"></div></div>
-    <div id="dbst" class="db-status">データベースを読み込んでいます…</div>
+    <div id="dbst" class="db-status">準備中…</div>
     <div class="note">
       見つからない場合はお電話ください<br>
       <a href="tel:0154-24-4146">📞 環境事業課 0154-24-4146</a><br>
@@ -156,15 +156,18 @@ fetch(DB_URL)
     DB       = d.db    || [];
     ICONS    = d.icons || {};
     DB_READY = true;
-    document.getElementById('dbst').textContent = 'DB ' + DB.length + '件 読み込み完了';
-    document.getElementById('btn').disabled     = false;
-    document.getElementById('btn').textContent  = '🔍 捨て方を調べる';
+    // 読み込み完了後は準備中表示を消す
+    document.getElementById('dbst').style.display = 'none';
+    document.getElementById('btn').disabled        = false;
+    document.getElementById('btn').textContent     = '🔍 捨て方を調べる';
   })
   .catch(function() {
-    document.getElementById('dbst').className   = 'db-error';
-    document.getElementById('dbst').textContent = '読み込み失敗。ページを再読み込みしてください。';
-    document.getElementById('btn').disabled     = false;
-    document.getElementById('btn').textContent  = '🔍 捨て方を調べる';
+    var dbst = document.getElementById('dbst');
+    dbst.className        = 'db-error';
+    dbst.textContent      = '読み込み失敗。ページを再読み込みしてください。';
+    dbst.style.display    = 'block';
+    document.getElementById('btn').disabled    = false;
+    document.getElementById('btn').textContent = '🔍 捨て方を調べる';
   });
 
 // 正規化
