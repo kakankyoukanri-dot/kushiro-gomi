@@ -65,7 +65,7 @@
     appearance: none;
     touch-action: manipulation;
   }
-  button:active  { background: #0d4420; }
+  button:active   { background: #0d4420; }
   button:disabled { background: #888; }
   .note { margin-top: 12px; font-size: 14px; color: #888; text-align: center; line-height: 2.0; }
   .note a { color: #1a6632; text-decoration: none; font-weight: bold; }
@@ -138,7 +138,7 @@
   <div class="footer">釧路市 市民環境部 環境事業課</div>
 </div>
 <script>
-var GAS_URL  = 'https://script.google.com/macros/s/AKfycbxAseBZNzfLtMq-N3RuWG354h-A67ciL22DmDDK1vDiGRLSyseBYCkqlvYcFuN56vIR/exec';
+var GAS_URL  = 'https://script.google.com/macros/s/AKfycbwdSfB2MNQly7joNssHBJQGEnLUovT3W3zI8Fr9YRRPX2xTV524hxHdzlqAjlveIugSxQ/exec';
 var DB       = [];
 var ICONS    = {};
 var DB_READY = false;
@@ -172,27 +172,44 @@ function norm(str) {
   return [s, toK(s), toH(s)];
 }
 
+// ============================================
 // 検索
+// スコア基準：
+//   110点 完全一致（品目名）
+//   100点 完全一致（キーワード）
+//    85点 前方一致（品目名・3文字以上のみ）
+//    80点 前方一致（キーワード・3文字以上のみ）
+//    65点 部分一致（品目名・3文字以上のみ）
+//    60点 部分一致（キーワード・3文字以上のみ）
+// 1文字：完全一致のみ
+// 2文字：完全一致のみ
+// 3文字以上：完全一致＋前方一致＋部分一致
+// ============================================
 function searchLocal(query) {
   var res = [], qs = norm(query);
-  // 2文字以下は部分一致を使わない（誤ヒット防止）
-  var usePartial = query.length >= 3;
+  var len = query.length;
+  // 3文字以上のみ前方一致・部分一致を使用
+  var useFront   = len >= 3;
+  var usePartial = len >= 3;
+
   for (var i = 0; i < DB.length; i++) {
     var r = DB[i], sc = 0;
+
+    // ── 品目名スコアリング（最大110点）──
     var nv = norm(r.name), done = false;
     for (var qi = 0; qi < qs.length && !done; qi++) {
       for (var ni = 0; ni < nv.length && !done; ni++) {
         if (nv[ni] === qs[qi]) {
           sc = 110; done = true;
-        } else if (nv[ni].indexOf(qs[qi]) === 0) {
-          // DB単語がクエリで始まる（前方一致）
+        } else if (useFront && nv[ni].indexOf(qs[qi]) === 0) {
           sc = Math.max(sc, 85);
         } else if (usePartial && nv[ni].indexOf(qs[qi]) > -1) {
-          // DB単語にクエリが含まれる（部分一致・3文字以上のみ）
           sc = Math.max(sc, 65);
         }
       }
     }
+
+    // ── キーワードスコアリング（最大100点）──
     if (sc < 110) {
       var dk = false;
       for (var ki = 0; ki < r.keywords.length && !dk; ki++) {
@@ -202,7 +219,7 @@ function searchLocal(query) {
           for (var kvi = 0; kvi < kv.length && !dk; kvi++) {
             if (kv[kvi] === qs[qi2]) {
               sc = Math.max(sc, 100); dk = true;
-            } else if (kv[kvi].indexOf(qs[qi2]) === 0) {
+            } else if (useFront && kv[kvi].indexOf(qs[qi2]) === 0) {
               sc = Math.max(sc, 80);
             } else if (usePartial && kv[kvi].indexOf(qs[qi2]) > -1) {
               sc = Math.max(sc, 60);
@@ -211,9 +228,12 @@ function searchLocal(query) {
         }
       }
     }
-    if (query.length <= 2 && sc < 100) continue;
+
+    // 2文字以下は完全一致のみ許可
+    if (len <= 2 && sc < 100) continue;
     if (sc > 0) res.push({ item: r, score: sc });
   }
+
   res.sort(function(a, b) { return b.score - a.score || a.item.name.localeCompare(b.item.name, 'ja'); });
   return res.map(function(r) { return r.item; });
 }
