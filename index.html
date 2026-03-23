@@ -19,8 +19,6 @@
     background: #f0f4f0;
     min-height: 100vh;
   }
-
-  /* ヘッダー */
   .header {
     background: #1a6632;
     color: #fff;
@@ -29,11 +27,7 @@
   }
   .header h1 { font-size: 22px; font-weight: bold; margin-bottom: 4px; }
   .header p  { font-size: 14px; opacity: 0.85; }
-
-  /* コンテナ */
   .container { width: 100%; max-width: 640px; margin: 0 auto; padding: 12px; }
-
-  /* 検索ボックス */
   .search-box {
     background: #fff;
     border-radius: 14px;
@@ -71,21 +65,12 @@
     appearance: none;
     touch-action: manipulation;
   }
-  button:active { background: #0d4420; }
+  button:active  { background: #0d4420; }
   button:disabled { background: #888; }
-
-  .note {
-    margin-top: 12px;
-    font-size: 14px;
-    color: #888;
-    text-align: center;
-    line-height: 2.0;
-  }
+  .note { margin-top: 12px; font-size: 14px; color: #888; text-align: center; line-height: 2.0; }
   .note a { color: #1a6632; text-decoration: none; font-weight: bold; }
   .db-status { font-size: 12px; text-align: center; margin-top: 6px; color: #1a6632; }
   .db-error  { font-size: 12px; text-align: center; margin-top: 6px; color: #c0392b; }
-
-  /* 結果カード */
   .result-wrap { display: none; margin-top: 4px; }
   .result-header {
     background: #1a6632;
@@ -107,7 +92,6 @@
     word-break: break-all;
   }
   .result-body.notfound { background: #fff8f0; border-color: #f0d0a0; }
-
   .item-block  { margin-bottom: 4px; }
   .item-title  { font-size: 16px; font-weight: bold; color: #1a6632; margin-bottom: 4px; }
   .item-kw     { color: #666; font-size: 13px; margin-top: 2px; margin-bottom: 6px; line-height: 1.6; }
@@ -121,7 +105,6 @@
   .divider     { border: none; border-top: 1px solid #d5ead8; margin: 12px 0; }
   .time        { margin-top: 6px; font-size: 11px; color: #aaa; text-align: right; }
   .footer      { text-align: center; font-size: 11px; color: #aaa; padding: 20px 0 32px; }
-
   .loading-bar { width: 100%; height: 3px; background: #e0e0e0; border-radius: 3px; margin-top: 10px; display: none; overflow: hidden; }
   .loading-bar-inner { height: 100%; width: 30%; background: #1a6632; border-radius: 3px; animation: slide 1.2s ease-in-out infinite; }
   @keyframes slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(400%); } }
@@ -155,7 +138,7 @@
   <div class="footer">釧路市 市民環境部 環境事業課</div>
 </div>
 <script>
-var GAS_URL = 'https://script.google.com/macros/s/AKfycbxAseBZNzfLtMq-N3RuWG354h-A67ciL22DmDDK1vDiGRLSyseBYCkqlvYcFuN56vIR/exec';
+var GAS_URL  = 'https://script.google.com/macros/s/AKfycbxAseBZNzfLtMq-N3RuWG354h-A67ciL22DmDDK1vDiGRLSyseBYCkqlvYcFuN56vIR/exec';
 var DB       = [];
 var ICONS    = {};
 var DB_READY = false;
@@ -254,8 +237,9 @@ function doSearch() {
   bar.style.display  = 'none';
   wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-  // ログ保存
-  new Image().src = GAS_URL + '?q=' + encodeURIComponent(q) + '&found=' + (results.length > 0 ? '1' : '0');
+  // ログ保存（fetch方式）
+  fetch(GAS_URL + '?q=' + encodeURIComponent(q) + '&found=' + (results.length > 0 ? '1' : '0'))
+    .catch(function() {});
 }
 
 // 結果フォーマット
@@ -277,7 +261,9 @@ function formatResults(q, results) {
     if (dk.length > 0) html += '<div class="item-kw">別名・関連：' + esc(dk.join('、')) + '</div>';
     html += buildHtml(r, true) + '</div>';
   });
-  if (results.length > 5) html += '<div style="margin-top:8px;font-size:13px;color:#888">他 ' + (results.length - 5) + ' 件あります。より具体的な品目名で検索してください。</div>';
+  if (results.length > 5) {
+    html += '<div style="margin-top:8px;font-size:13px;color:#888">他 ' + (results.length - 5) + ' 件あります。より具体的な品目名で検索してください。</div>';
+  }
   return { header: '「' + q + '」の検索結果（' + results.length + '件）', notfound: false, html: html };
 }
 
