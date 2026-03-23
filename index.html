@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>釧路市ごみ分別検索</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+  html, body {
+    width: 100%;
+    overflow-x: hidden;
+    font-family: 'Hiragino Sans', 'Meiryo', sans-serif;
+    background: #f0f4f0;
+    min-height: 100vh;
+  }
+
+  /* ヘッダー */
+  .header {
+    background: #1a6632;
+    color: #fff;
+    padding: 18px 16px;
+    text-align: center;
+  }
+  .header h1 { font-size: 22px; font-weight: bold; margin-bottom: 4px; }
+  .header p  { font-size: 14px; opacity: 0.85; }
+
+  /* コンテナ */
+  .container { width: 100%; max-width: 640px; margin: 0 auto; padding: 12px; }
+
+  /* 検索ボックス */
+  .search-box {
+    background: #fff;
+    border-radius: 14px;
+    padding: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    margin-bottom: 12px;
+  }
+  input[type=text] {
+    display: block;
+    width: 100%;
+    padding: 14px 12px;
+    font-size: 18px;
+    border: 2px solid #cde8d4;
+    border-radius: 10px;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+    color: #333;
+    background: #fff;
+  }
+  input[type=text]:focus { border-color: #1a6632; }
+  button {
+    display: block;
+    width: 100%;
+    padding: 15px;
+    margin-top: 10px;
+    background: #1a6632;
+    color: #fff;
+    font-size: 19px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: bold;
+    -webkit-appearance: none;
+    appearance: none;
+    touch-action: manipulation;
+  }
+  button:active { background: #0d4420; }
+  button:disabled { background: #888; }
+
+  .note {
+    margin-top: 12px;
+    font-size: 14px;
+    color: #888;
+    text-align: center;
+    line-height: 2.0;
+  }
+  .note a { color: #1a6632; text-decoration: none; font-weight: bold; }
+  .db-status { font-size: 12px; text-align: center; margin-top: 6px; color: #1a6632; }
+  .db-error  { font-size: 12px; text-align: center; margin-top: 6px; color: #c0392b; }
+
+  /* 結果カード */
+  .result-wrap { display: none; margin-top: 4px; }
+  .result-header {
+    background: #1a6632;
+    color: #fff;
+    border-radius: 10px 10px 0 0;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-weight: bold;
+    word-break: break-all;
+  }
+  .result-body {
+    background: #f0f8f1;
+    border: 1px solid #c5e0cc;
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+    padding: 14px;
+    font-size: 15px;
+    line-height: 2.1;
+    word-break: break-all;
+  }
+  .result-body.notfound { background: #fff8f0; border-color: #f0d0a0; }
+
+  .item-block  { margin-bottom: 4px; }
+  .item-title  { font-size: 16px; font-weight: bold; color: #1a6632; margin-bottom: 4px; }
+  .item-kw     { color: #666; font-size: 13px; margin-top: 2px; margin-bottom: 6px; line-height: 1.6; }
+  .lbl-cat     { display: inline-block; background: #1a6632; color: #fff; font-size: 14px; font-weight: bold; padding: 2px 10px; border-radius: 20px; margin-bottom: 6px; }
+  .lbl-method  { color: #1a4a25; font-weight: bold; font-size: 12px; margin-top: 8px; margin-bottom: 2px; }
+  .lbl-place   { color: #8b4513; font-weight: bold; font-size: 12px; margin-top: 8px; margin-bottom: 2px; }
+  .lbl-note    { color: #c0392b; font-weight: bold; font-size: 12px; margin-top: 8px; margin-bottom: 2px; }
+  .val-method  { color: #1a1a1a; font-size: 15px; line-height: 2.0; white-space: pre-wrap; }
+  .val-place   { color: #6b3010; font-size: 15px; line-height: 2.0; background: #fff8f0; border-radius: 6px; padding: 6px 10px; border-left: 3px solid #e0a040; }
+  .val-note    { color: #b33020; font-size: 15px; line-height: 2.0; background: #fff5f5; border-radius: 6px; padding: 6px 10px; border-left: 3px solid #e05040; }
+  .divider     { border: none; border-top: 1px solid #d5ead8; margin: 12px 0; }
+  .time        { margin-top: 6px; font-size: 11px; color: #aaa; text-align: right; }
+  .footer      { text-align: center; font-size: 11px; color: #aaa; padding: 20px 0 32px; }
+
+  .loading-bar { width: 100%; height: 3px; background: #e0e0e0; border-radius: 3px; margin-top: 10px; display: none; overflow: hidden; }
+  .loading-bar-inner { height: 100%; width: 30%; background: #1a6632; border-radius: 3px; animation: slide 1.2s ease-in-out infinite; }
+  @keyframes slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(400%); } }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>🗑 釧路市ごみ分別検索</h1>
+  <p>品目名を入力して捨て方を調べられます</p>
+</div>
+<div class="container">
+  <div class="search-box">
+    <input type="text" id="q"
+      placeholder="例：バッテリー、消火器、テレビ"
+      autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+      onkeydown="if(event.key==='Enter')doSearch()">
+    <button id="btn" onclick="doSearch()" disabled>読み込み中…</button>
+    <div class="loading-bar" id="bar"><div class="loading-bar-inner"></div></div>
+    <div id="dbst" class="db-status">データベースを読み込んでいます…</div>
+    <div class="note">
+      見つからない場合はお電話ください<br>
+      <a href="tel:0154-24-4146">📞 環境事業課 0154-24-4146</a><br>
+      受付時間：平日 9:00〜17:00
+    </div>
+  </div>
+  <div class="result-wrap" id="wrap">
+    <div class="result-header" id="hdr"></div>
+    <div class="result-body"  id="out"></div>
+  </div>
+  <div class="time" id="tim"></div>
+  <div class="footer">釧路市 市民環境部 環境事業課</div>
+</div>
+<script>
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbxAseBZNzfLtMq-N3RuWG354h-A67ciL22DmDDK1vDiGRLSyseBYCkqlvYcFuN56vIR/exec';
+var DB       = [];
+var ICONS    = {};
+var DB_READY = false;
+
+// 起動時にGASからDB取得
+fetch(GAS_URL + '?mode=getdb')
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    DB       = d.db    || [];
+    ICONS    = d.icons || {};
+    DB_READY = true;
+    document.getElementById('dbst').textContent = 'DB ' + DB.length + '件 読み込み完了';
+    document.getElementById('btn').disabled     = false;
+    document.getElementById('btn').textContent  = '🔍 捨て方を調べる';
+  })
+  .catch(function() {
+    document.getElementById('dbst').className   = 'db-error';
+    document.getElementById('dbst').textContent = '読み込み失敗。ページを再読み込みしてください。';
+    document.getElementById('btn').disabled     = false;
+    document.getElementById('btn').textContent  = '🔍 捨て方を調べる';
+  });
+
+// 正規化
+function toK(s) { return s.replace(/[\u3041-\u3096]/g, function(c) { return String.fromCharCode(c.charCodeAt(0) + 96); }); }
+function toH(s) { return s.replace(/[\u30A1-\u30F6]/g, function(c) { return String.fromCharCode(c.charCodeAt(0) - 96); }); }
+function norm(str) {
+  var s = str.toLowerCase()
+    .replace(/[\uFF21-\uFF3A\uFF41-\uFF5A\uFF10-\uFF19]/g, function(c) { return String.fromCharCode(c.charCodeAt(0) - 65248); })
+    .replace(/[\u30FC\u2015\u2212\uFF0D]/g, '\u30FC')
+    .replace(/\s/g, '');
+  return [s, toK(s), toH(s)];
+}
+
+// 検索
+function searchLocal(query) {
+  var res = [], qs = norm(query);
+  for (var i = 0; i < DB.length; i++) {
+    var r = DB[i], sc = 0;
+    var nv = norm(r.name), done = false;
+    for (var qi = 0; qi < qs.length && !done; qi++) {
+      for (var ni = 0; ni < nv.length && !done; ni++) {
+        if      (nv[ni] === qs[qi])            { sc = 110; done = true; }
+        else if (nv[ni].indexOf(qs[qi]) === 0) { sc = Math.max(sc, 85); }
+        else if (nv[ni].indexOf(qs[qi]) > -1)  { sc = Math.max(sc, 65); }
+      }
+    }
+    if (sc < 110) {
+      var dk = false;
+      for (var ki = 0; ki < r.keywords.length && !dk; ki++) {
+        if (!r.keywords[ki]) continue;
+        var kv = norm(r.keywords[ki]);
+        for (var qi2 = 0; qi2 < qs.length && !dk; qi2++) {
+          for (var kvi = 0; kvi < kv.length && !dk; kvi++) {
+            if      (kv[kvi] === qs[qi2])            { sc = Math.max(sc, 100); dk = true; }
+            else if (kv[kvi].indexOf(qs[qi2]) === 0) { sc = Math.max(sc, 80); }
+            else if (kv[kvi].indexOf(qs[qi2]) > -1)  { sc = Math.max(sc, 60); }
+          }
+        }
+      }
+    }
+    if (query.length <= 1 && sc < 100) continue;
+    if (sc > 0) res.push({ item: r, score: sc });
+  }
+  res.sort(function(a, b) { return b.score - a.score || a.item.name.localeCompare(b.item.name, 'ja'); });
+  return res.map(function(r) { return r.item; });
+}
+
+// 検索実行
+function doSearch() {
+  var q = document.getElementById('q').value.trim();
+  if (!q) return;
+  if (!DB_READY) { alert('データ読み込み中です。しばらくお待ちください。'); return; }
+
+  var wrap = document.getElementById('wrap');
+  var out  = document.getElementById('out');
+  var hdr  = document.getElementById('hdr');
+  var tim  = document.getElementById('tim');
+  var btn  = document.getElementById('btn');
+  var bar  = document.getElementById('bar');
+
+  wrap.style.display = 'none';
+  tim.textContent    = '';
+  btn.disabled       = true;
+  bar.style.display  = 'block';
+
+  var t       = Date.now();
+  var results = searchLocal(q);
+  var ans     = formatResults(q, results);
+
+  hdr.textContent    = ans.header;
+  out.className      = ans.notfound ? 'result-body notfound' : 'result-body';
+  out.innerHTML      = ans.html;
+  wrap.style.display = 'block';
+  tim.textContent    = '検索時間：' + ((Date.now() - t) / 1000).toFixed(3) + '秒';
+  btn.disabled       = false;
+  bar.style.display  = 'none';
+  wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // ログ保存
+  new Image().src = GAS_URL + '?q=' + encodeURIComponent(q) + '&found=' + (results.length > 0 ? '1' : '0');
+}
+
+// 結果フォーマット
+function formatResults(q, results) {
+  if (results.length === 0) {
+    return { header: '検索結果', notfound: true,
+      html: esc('「' + q + '」の捨て方が見つかりませんでした。\n別の言葉で検索するか、お電話でお問い合わせください。\n📞 環境事業課　0154-24-4146\n受付時間：平日 9:00〜17:00').replace(/\n/g, '<br>') };
+  }
+  if (results.length === 1) {
+    var r = results[0];
+    return { header: r.name !== q ? '「' + q + '」→「' + r.name + '」' : '「' + q + '」の捨て方',
+      notfound: false, html: buildHtml(r, false) };
+  }
+  var html = '', shown = results.slice(0, 5);
+  shown.forEach(function(r, i) {
+    if (i > 0) html += '<hr class="divider">';
+    html += '<div class="item-block"><div class="item-title">【' + (i + 1) + '】' + esc(r.name) + '</div>';
+    var dk = r.keywords.filter(function(k) { return k && k !== r.name; });
+    if (dk.length > 0) html += '<div class="item-kw">別名・関連：' + esc(dk.join('、')) + '</div>';
+    html += buildHtml(r, true) + '</div>';
+  });
+  if (results.length > 5) html += '<div style="margin-top:8px;font-size:13px;color:#888">他 ' + (results.length - 5) + ' 件あります。より具体的な品目名で検索してください。</div>';
+  return { header: '「' + q + '」の検索結果（' + results.length + '件）', notfound: false, html: html };
+}
+
+// 品目HTML生成
+function buildHtml(item, skipKw) {
+  var icon = ICONS[item.category] || '';
+  var html = '';
+  if (!skipKw) {
+    var dk = item.keywords.filter(function(k) { return k && k !== item.name; });
+    if (dk.length > 0) html += '<div class="item-kw">別名・関連：' + esc(dk.join('、')) + '</div>';
+  }
+  html += '<span class="lbl-cat">' + icon + ' ' + esc(item.category) + '</span>';
+  if (item.method && item.method !== 'nan') {
+    html += '<div class="lbl-method">📋 処分方法</div>';
+    html += '<div class="val-method">' + esc(item.method).replace(/\n/g, '<br>') + '</div>';
+  }
+  if (item.place && item.place !== 'nan' && item.place !== '') {
+    html += '<div class="lbl-place">🏪 持込先・連絡先</div>';
+    var ph = esc(item.place).replace(/\n/g, '<br>')
+      .replace(/(☎|℡|TEL:?|Tel:?)?[\s　]*(0\d{1,4}[-－―‐]\d{1,4}[-－―‐]\d{1,4})/g,
+        function(m, pre, tel) {
+          var ct = tel.replace(/[-－―‐]/g, '-');
+          return '<a href="tel:' + ct + '" style="color:#8b4513;font-weight:bold;text-decoration:underline">' + (pre ? pre + ' ' : '') + tel + '</a>';
+        });
+    html += '<div class="val-place">' + ph + '</div>';
+  }
+  if (item.note && item.note !== 'nan' && item.note !== '') {
+    html += '<div class="lbl-note">⚠️ 注意事項</div>';
+    html += '<div class="val-note">' + esc(item.note).replace(/\n/g, '<br>') + '</div>';
+  }
+  return html;
+}
+
+function esc(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+</script>
+</body>
+</html>
