@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>釧路市ごみ分別検索</title>
 <meta name="robots" content="noindex, nofollow">
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-793TDVPH1G"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-793TDVPH1G');
+</script>
 <style>
   *, *::before, *::after {
     box-sizing: border-box;
@@ -261,6 +269,14 @@ function doSearch() {
   // ログ保存（GASに送信・任意）
   fetch(LOG_URL + '?q=' + encodeURIComponent(q) + '&found=' + (results.length > 0 ? '1' : '0'))
     .catch(function() {});
+
+  // Google Analyticsに検索イベントを送信
+  if (typeof gtag !== 'undefined') {
+    gtag('event', 'search', {
+      search_term: q,
+      found: results.length > 0 ? '登録済み' : '未登録'
+    });
+  }
 }
 
 // 結果フォーマット
