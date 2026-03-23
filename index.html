@@ -270,9 +270,12 @@ function formatResults(q, results) {
       html: esc('「' + q + '」の捨て方が見つかりませんでした。\n別の言葉で検索するか、お電話でお問い合わせください。\n📞 環境事業課　0154-24-4146\n受付時間：平日 9:00〜17:00').replace(/\n/g, '<br>') };
   }
   if (results.length === 1) {
-    var r = results[0];
-    return { header: r.name !== q ? '「' + q + '」→「' + r.name + '」' : '「' + q + '」の捨て方',
-      notfound: false, html: buildHtml(r, false) };
+    var r    = results[0];
+    var icon = ICONS[r.category] || '';
+    var lbl  = r.name !== q ? '「' + q + '」→「' + r.name + '」' : '「' + q + '」の捨て方';
+    var html = '<div class="item-title">' + esc(r.name) + '&nbsp;<span class="lbl-cat-sm">' + icon + ' ' + esc(r.category) + '</span></div>';
+    html += buildHtml(r, false);
+    return { header: lbl, notfound: false, html: html };
   }
   var html = '', shown = results.slice(0, 5);
   shown.forEach(function(r, i) {
@@ -292,13 +295,11 @@ function formatResults(q, results) {
 
 // 品目HTML生成
 function buildHtml(item, skipKw) {
-  var icon = ICONS[item.category] || '';
   var html = '';
   if (!skipKw) {
-    // 1件表示時：キーワードとバッジを表示
+    // 1件表示時：キーワードのみ（バッジはタイトル行に表示済み）
     var dk = item.keywords.filter(function(k) { return k && k !== item.name; });
     if (dk.length > 0) html += '<div class="item-kw">別名・関連：' + esc(dk.join('、')) + '</div>';
-    html += '<span class="lbl-cat">' + icon + ' ' + esc(item.category) + '</span>';
   }
   // 処分方法
   if (item.method && item.method !== 'nan') {
