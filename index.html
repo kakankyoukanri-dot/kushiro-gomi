@@ -309,6 +309,21 @@ function formatResults(q, results) {
   return { header: '「' + q + '」の検索結果（' + results.length + '件）', notfound: false, html: html };
 }
 
+function linkify(str) {
+  // 電話番号をクリックコールに変換
+  str = str.replace(/(☎|℡|TEL:?|Tel:?)?[\s　]*(0\d{1,4}[-－―‐]\d{1,4}[-－―‐]\d{1,4})/g,
+    function(m, pre, tel) {
+      var ct = tel.replace(/[-－―‐]/g, '-');
+      return '<a href="tel:' + ct + '" style="color:#1a6632;font-weight:bold;text-decoration:underline">' + (pre ? pre + ' ' : '') + tel + '</a>';
+    });
+  // URLをリンクに変換
+  str = str.replace(/(https?:\/\/[^\s<　「」【】、。]+)/g,
+    function(url) {
+      return '<a href="' + url + '" target="_blank" rel="noopener noreferrer" style="color:#1a6632;font-weight:bold;text-decoration:underline;word-break:break-all">' + url + '</a>';
+    });
+  return str;
+}
+
 // 品目HTML生成
 function buildHtml(item, skipKw) {
   var html = '';
@@ -320,23 +335,17 @@ function buildHtml(item, skipKw) {
   // 処分方法
   if (item.method && item.method !== 'nan') {
     html += '<div class="lbl-method">📋 処分方法</div>';
-    html += '<div class="val-method">' + esc(item.method).replace(/\n/g, '<br>') + '</div>';
+    html += '<div class="val-method">' + linkify(esc(item.method).replace(/\n/g, '<br>')) + '</div>';
   }
   // 持込先・連絡先
   if (item.place && item.place !== 'nan' && item.place !== '') {
     html += '<div class="lbl-place">🏪 持込先・連絡先</div>';
-    var ph = esc(item.place).replace(/\n/g, '<br>')
-      .replace(/(☎|℡|TEL:?|Tel:?)?[\s　]*(0\d{1,4}[-－―‐]\d{1,4}[-－―‐]\d{1,4})/g,
-        function(m, pre, tel) {
-          var ct = tel.replace(/[-－―‐]/g, '-');
-          return '<a href="tel:' + ct + '" style="color:#8b4513;font-weight:bold;text-decoration:underline">' + (pre ? pre + ' ' : '') + tel + '</a>';
-        });
-    html += '<div class="val-place">' + ph + '</div>';
+    html += '<div class="val-place">' + linkify(esc(item.place).replace(/\n/g, '<br>')) + '</div>';
   }
   // 注意事項
   if (item.note && item.note !== 'nan' && item.note !== '') {
     html += '<div class="lbl-note">⚠️ 注意事項</div>';
-    html += '<div class="val-note">' + esc(item.note).replace(/\n/g, '<br>') + '</div>';
+    html += '<div class="val-note">' + linkify(esc(item.note).replace(/\n/g, '<br>')) + '</div>';
   }
   return html;
 }
