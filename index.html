@@ -164,7 +164,6 @@ fetch(DB_URL)
     DB       = d.db    || [];
     ICONS    = d.icons || {};
     DB_READY = true;
-    // 読み込み完了後は準備中表示を消す
     document.getElementById('dbst').style.display = 'none';
     document.getElementById('btn').disabled        = false;
     document.getElementById('btn').textContent     = '🔍 捨て方を調べる';
@@ -187,6 +186,24 @@ function norm(str) {
     .replace(/[\u30FC\u2015\u2212\uFF0D]/g, '\u30FC')
     .replace(/\s/g, '');
   return [s, toK(s), toH(s)];
+}
+
+// アイコン描画（色名→SVG丸）
+function renderIcon(color) {
+  if (!color) return '';
+  if (color === 'warning') {
+    return '<svg width="14" height="14" viewBox="0 0 14 14" style="vertical-align:middle;margin-right:2px"><polygon points="7,1 13,13 1,13" fill="#F9A825" stroke="#F57F17" stroke-width="1"/><text x="7" y="11.5" text-anchor="middle" font-size="7" fill="#333" font-weight="bold">!</text></svg>';
+  }
+  var map = {
+    'orange': '#FF8C00',
+    'blue':   '#1565C0',
+    'purple': '#6A1B9A',
+    'green':  '#2E7D32',
+    'red':    '#C62828',
+    'white':  '#BDBDBD'
+  };
+  var c = map[color] || '#888';
+  return '<svg width="12" height="12" viewBox="0 0 12 12" style="vertical-align:middle;margin-right:2px"><circle cx="6" cy="6" r="5" fill="' + c + '"/></svg>';
 }
 
 // 検索
@@ -266,11 +283,9 @@ function doSearch() {
   bar.style.display  = 'none';
   wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-  // ログ保存（GASに送信・任意）
   fetch(LOG_URL + '?q=' + encodeURIComponent(q) + '&found=' + (results.length > 0 ? '1' : '0'))
     .catch(function() {});
 
-  // Google Analyticsに検索イベントを送信
   if (typeof gtag !== 'undefined') {
     gtag('event', 'search', {
       search_term: q,
@@ -287,18 +302,18 @@ function formatResults(q, results) {
   }
   if (results.length === 1) {
     var r    = results[0];
-    var icon = ICONS[r.category] || '';
+    var icon = renderIcon(ICONS[r.category]);
     var lbl  = r.name !== q ? '「' + q + '」→「' + r.name + '」' : '「' + q + '」の捨て方';
-    var html = '<div class="item-title">' + esc(r.name) + '&nbsp;<span class="lbl-cat-sm">' + icon + ' ' + esc(r.category) + '</span></div>';
+    var html = '<div class="item-title">' + esc(r.name) + '&nbsp;<span class="lbl-cat-sm">' + icon + esc(r.category) + '</span></div>';
     html += buildHtml(r, false);
     return { header: lbl, notfound: false, html: html };
   }
   var html = '', shown = results.slice(0, 5);
   shown.forEach(function(r, i) {
-    var icon = ICONS[r.category] || '';
+    var icon = renderIcon(ICONS[r.category]);
     if (i > 0) html += '<hr class="divider">';
     html += '<div class="item-block">';
-    html += '<div class="item-title">【' + (i + 1) + '】' + esc(r.name) + '&nbsp;<span class="lbl-cat-sm">' + icon + ' ' + esc(r.category) + '</span></div>';
+    html += '<div class="item-title">【' + (i + 1) + '】' + esc(r.name) + '&nbsp;<span class="lbl-cat-sm">' + icon + esc(r.category) + '</span></div>';
     var dk = r.keywords.filter(function(k) { return k && k !== r.name; });
     if (dk.length > 0) html += '<div class="item-kw">別名・関連：' + esc(dk.join('、')) + '</div>';
     html += buildHtml(r, true) + '</div>';
@@ -310,13 +325,11 @@ function formatResults(q, results) {
 }
 
 function linkify(str) {
-  // 電話番号をクリックコールに変換
   str = str.replace(/(☎|℡|TEL:?|Tel:?)?[\s　]*(0\d{1,4}[-－―‐]\d{1,4}[-－―‐]\d{1,4})/g,
     function(m, pre, tel) {
       var ct = tel.replace(/[-－―‐]/g, '-');
       return '<a href="tel:' + ct + '" style="color:#1a6632;font-weight:bold;text-decoration:underline">' + (pre ? pre + ' ' : '') + tel + '</a>';
     });
-  // URLをリンクに変換
   str = str.replace(/(https?:\/\/[^\s<　「」【】、。]+)/g,
     function(url) {
       return '<a href="' + url + '" target="_blank" rel="noopener noreferrer" style="color:#1a6632;font-weight:bold;text-decoration:underline;word-break:break-all">' + url + '</a>';
@@ -328,21 +341,17 @@ function linkify(str) {
 function buildHtml(item, skipKw) {
   var html = '';
   if (!skipKw) {
-    // 1件表示時：キーワードのみ（バッジはタイトル行に表示済み）
     var dk = item.keywords.filter(function(k) { return k && k !== item.name; });
     if (dk.length > 0) html += '<div class="item-kw">別名・関連：' + esc(dk.join('、')) + '</div>';
   }
-  // 処分方法
   if (item.method && item.method !== 'nan') {
     html += '<div class="lbl-method">📋 処分方法</div>';
     html += '<div class="val-method">' + linkify(esc(item.method).replace(/\n/g, '<br>')) + '</div>';
   }
-  // 持込先・連絡先
   if (item.place && item.place !== 'nan' && item.place !== '') {
     html += '<div class="lbl-place">🏪 持込先・連絡先</div>';
     html += '<div class="val-place">' + linkify(esc(item.place).replace(/\n/g, '<br>')) + '</div>';
   }
-  // 注意事項
   if (item.note && item.note !== 'nan' && item.note !== '') {
     html += '<div class="lbl-note">⚠️ 注意事項</div>';
     html += '<div class="val-note">' + linkify(esc(item.note).replace(/\n/g, '<br>')) + '</div>';
